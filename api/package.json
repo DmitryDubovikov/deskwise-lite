@@ -3,6 +3,7 @@
 	"version": "1.0.0",
 	"scripts": {
 		"dev": "tsx watch src/index.ts",
+		"openapi:emit": "tsx scripts/emit-openapi.ts",
 		"test": "vitest run",
 		"lint": "biome check .",
 		"typecheck": "tsc --noEmit",
@@ -11,7 +12,10 @@
 	"license": "ISC",
 	"type": "module",
 	"dependencies": {
-		"fastify": "^5.10.0"
+		"@fastify/swagger": "^9.8.1",
+		"fastify": "^5.10.0",
+		"fastify-type-provider-zod": "^7.0.0",
+		"zod": "^4.4.3"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.4",
