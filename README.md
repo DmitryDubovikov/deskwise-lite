@@ -10,7 +10,7 @@ summarize и SSE-стриминг suggest-reply.
 - Конституция — [CLAUDE.md](CLAUDE.md)
 - План итераций — [ROADMAP.md](ROADMAP.md)
 
-## Quickstart (по состоянию на iter 2 — дерево плагинов + `buildApp(deps)`)
+## Quickstart (по состоянию на iter 3 — pino, envelope ошибок, `/docs`)
 
 Нужен установленный `pnpm` (проект собирался на pnpm v11, Node v22). Один раз поставь
 зависимости, дальше — цели из корневого `Makefile`:
@@ -27,6 +27,12 @@ make openapi  # эмит api/openapi.json из Zod-схем роутов (фай
 
 API тикетов (iter 1): `POST /tickets`, `GET /tickets?status=`, `GET /tickets/:id` — каждый
 роут описан Zod-схемой, которая даёт валидацию (400 автоматом), типы хендлера и OpenAPI.
+
+Эксплуатационная поверхность (iter 3): все ошибки — в едином envelope
+`{"error":{"code","message"}}`, описанном в спеке на кодах 400/404/500; каждый запрос
+пишет JSON-строку pino-лога с `reqId`; интерактивная документация — на
+`http://localhost:3000/docs/`. Env (`DW_PORT`, `DW_LOG_LEVEL`) читается только в
+`api/src/config.ts`, дефолты — в `api/.env.example`.
 
 Подробности итераций — [docs/iterations/](docs/iterations/).
 

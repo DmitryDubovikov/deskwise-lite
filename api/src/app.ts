@@ -1,6 +1,8 @@
 import fastifySwagger from "@fastify/swagger";
-import Fastify from "fastify";
+import fastifySwaggerUi from "@fastify/swagger-ui";
+import Fastify, { type FastifyError, type FastifyServerOptions } from "fastify";
 import {
+	hasZodFastifySchemaValidationErrors,
 	jsonSchemaTransform,
 	serializerCompiler,
 	validatorCompiler,
@@ -9,17 +11,52 @@ import {
 import { type TicketStore, ticketStorePlugin } from "./plugins/ticket-store.js";
 import { healthRoutes } from "./routes/health.js";
 import { ticketRoutes } from "./routes/tickets.js";
+import { errorBody } from "./schemas/error.js";
 
 export interface AppDeps {
 	ticketStore?: TicketStore;
+	// Конфиг встроенного pino: false в тестах, JSON-лог с уровнем из config в проде
+	logger?: FastifyServerOptions["logger"];
 }
 
 // Composition root (правило 6): дерево плагинов; зависимости — аргументами и декораторами.
 export async function buildApp(deps: AppDeps = {}) {
-	const app = Fastify().withTypeProvider<ZodTypeProvider>();
+	const app = Fastify({
+		logger: deps.logger ?? false,
+	}).withTypeProvider<ZodTypeProvider>();
 
 	app.setValidatorCompiler(validatorCompiler);
 	app.setSerializerCompiler(serializerCompiler);
+
+	// Все ошибки — в envelope контракта №2; 500 не течёт внутренностями наружу.
+	app.setErrorHandler<FastifyError>((error, request, reply) => {
+		if (hasZodFastifySchemaValidationErrors(error)) {
+			return reply.code(400).send(errorBody("VALIDATION_ERROR", error.message));
+		}
+		if (error.statusCode && error.statusCode < 500) {
+			// Транспортные коды Fastify (FST_ERR_CTP_* — битый JSON, content-type)
+			// не выносим в контрактный словарь кодов
+			const code = error.code?.startsWith("FST_ERR_CTP")
+				? "VALIDATION_ERROR"
+				: "REQUEST_ERROR";
+			return reply.code(error.statusCode).send(errorBody(code, error.message));
+		}
+		request.log.error({ err: error }, "unhandled error");
+		return reply
+			.code(500)
+			.send(errorBody("INTERNAL_SERVER_ERROR", "Internal server error"));
+	});
+
+	app.setNotFoundHandler((request, reply) =>
+		reply
+			.code(404)
+			.send(
+				errorBody(
+					"NOT_FOUND",
+					`Route ${request.method} ${request.url} not found`,
+				),
+			),
+	);
 
 	// await: свагеровский onRoute-хук должен встать до объявления роутов,
 	// иначе они не попадут в спеку
@@ -33,6 +70,9 @@ export async function buildApp(deps: AppDeps = {}) {
 		},
 		transform: jsonSchemaTransform,
 	});
+
+	// Интерактивная страница из той же спеки — аналог /docs FastAPI
+	await app.register(fastifySwaggerUi, { routePrefix: "/docs" });
 
 	await app.register(healthRoutes);
 

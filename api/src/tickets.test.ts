@@ -35,6 +35,7 @@ describe("POST /tickets", () => {
 		});
 
 		expect(response.statusCode).toBe(400);
+		expect(response.json().error.code).toBe("VALIDATION_ERROR");
 	});
 });
 
@@ -96,6 +97,7 @@ describe("GET /tickets/:id", () => {
 		});
 
 		expect(response.statusCode).toBe(404);
+		expect(response.json().error.code).toBe("NOT_FOUND");
 	});
 });
 

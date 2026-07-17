@@ -1,6 +1,11 @@
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import {
+	ErrorResponseSchema,
+	errorBody,
+	errorResponses,
+} from "../schemas/error.js";
+import {
 	CreateTicketSchema,
 	type Ticket,
 	TicketSchema,
@@ -10,7 +15,12 @@ import {
 export const ticketRoutes: FastifyPluginAsyncZod = async (app) => {
 	app.post(
 		"/tickets",
-		{ schema: { body: CreateTicketSchema, response: { 201: TicketSchema } } },
+		{
+			schema: {
+				body: CreateTicketSchema,
+				response: { 201: TicketSchema, ...errorResponses },
+			},
+		},
 		async (request, reply) => {
 			const ticket: Ticket = {
 				...request.body,
@@ -28,7 +38,7 @@ export const ticketRoutes: FastifyPluginAsyncZod = async (app) => {
 			schema: {
 				querystring: z.object({ status: TicketStatusSchema.optional() }),
 				// dw-lite: голый массив → {items, total, page, limit} (контракт №5, iter 5)
-				response: { 200: z.array(TicketSchema) },
+				response: { 200: z.array(TicketSchema), ...errorResponses },
 			},
 		},
 		async (request) => {
@@ -45,15 +55,15 @@ export const ticketRoutes: FastifyPluginAsyncZod = async (app) => {
 				params: TicketSchema.pick({ id: true }),
 				response: {
 					200: TicketSchema,
-					// dw-lite: plain message → error envelope №2 (iter 3)
-					404: z.object({ message: z.string() }),
+					404: ErrorResponseSchema,
+					...errorResponses,
 				},
 			},
 		},
 		async (request, reply) => {
 			const ticket = app.ticketStore.get(request.params.id);
 			if (!ticket) {
-				return reply.code(404).send({ message: "Ticket not found" });
+				return reply.code(404).send(errorBody("NOT_FOUND", "Ticket not found"));
 			}
 			return ticket;
 		},
