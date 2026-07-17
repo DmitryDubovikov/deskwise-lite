@@ -10,7 +10,7 @@ summarize и SSE-стриминг suggest-reply.
 - Конституция — [CLAUDE.md](CLAUDE.md)
 - План итераций — [ROADMAP.md](ROADMAP.md)
 
-## Quickstart (по состоянию на iter 1 — schema-first API)
+## Quickstart (по состоянию на iter 2 — дерево плагинов + `buildApp(deps)`)
 
 Нужен установленный `pnpm` (проект собирался на pnpm v11, Node v22). Один раз поставь
 зависимости, дальше — цели из корневого `Makefile`:

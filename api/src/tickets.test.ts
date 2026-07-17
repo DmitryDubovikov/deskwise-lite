@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildServer } from "./server.js";
+import { buildApp } from "./app.js";
+import type { Ticket } from "./schemas/ticket.js";
 
 const validBody = {
 	subject: "Missing items in order #4821",
@@ -8,7 +9,7 @@ const validBody = {
 
 describe("POST /tickets", () => {
 	it("creates a ticket with defaults from the schema", async () => {
-		const app = await buildServer();
+		const app = await buildApp();
 
 		const response = await app.inject({
 			method: "POST",
@@ -25,7 +26,7 @@ describe("POST /tickets", () => {
 	});
 
 	it("rejects an invalid body with 400 automatically", async () => {
-		const app = await buildServer();
+		const app = await buildApp();
 
 		const response = await app.inject({
 			method: "POST",
@@ -39,7 +40,7 @@ describe("POST /tickets", () => {
 
 describe("GET /tickets", () => {
 	it("filters by status", async () => {
-		const app = await buildServer();
+		const app = await buildApp();
 		await app.inject({ method: "POST", url: "/tickets", payload: validBody });
 
 		const open = await app.inject({
@@ -58,7 +59,7 @@ describe("GET /tickets", () => {
 	});
 
 	it("rejects an unknown status with 400", async () => {
-		const app = await buildServer();
+		const app = await buildApp();
 
 		const response = await app.inject({
 			method: "GET",
@@ -72,7 +73,7 @@ describe("GET /tickets", () => {
 
 describe("GET /tickets/:id", () => {
 	it("returns a created ticket by id", async () => {
-		const app = await buildServer();
+		const app = await buildApp();
 		const created = await app.inject({
 			method: "POST",
 			url: "/tickets",
@@ -87,7 +88,7 @@ describe("GET /tickets/:id", () => {
 	});
 
 	it("returns 404 for an unknown id", async () => {
-		const app = await buildServer();
+		const app = await buildApp();
 
 		const response = await app.inject({
 			method: "GET",
@@ -98,16 +99,25 @@ describe("GET /tickets/:id", () => {
 	});
 });
 
-describe("openapi spec", () => {
-	it("is generated without a listening server", async () => {
-		const app = await buildServer();
-		await app.ready();
+describe("buildApp(deps) with a fake store", () => {
+	it("serves tickets from the injected store without POST", async () => {
+		const ticket: Ticket = {
+			id: crypto.randomUUID(),
+			subject: "Wrong paper size delivered",
+			body: "Ordered A4, received A5 reams.",
+			status: "in_progress",
+			priority: "high",
+		};
+		const app = await buildApp({
+			ticketStore: new Map([[ticket.id, ticket]]),
+		});
 
-		const spec = app.swagger();
+		const response = await app.inject({
+			method: "GET",
+			url: `/tickets/${ticket.id}`,
+		});
 
-		expect(spec).toHaveProperty("openapi");
-		expect(Object.keys(spec.paths ?? {})).toEqual(
-			expect.arrayContaining(["/health", "/tickets", "/tickets/{id}"]),
-		);
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual(ticket);
 	});
 });

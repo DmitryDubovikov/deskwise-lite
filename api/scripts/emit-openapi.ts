@@ -1,7 +1,7 @@
 import { writeFile } from "node:fs/promises";
-import { buildServer } from "../src/server.js";
+import { buildApp } from "../src/app.js";
 
-const app = await buildServer();
+const app = await buildApp();
 await app.ready();
 
 const spec = JSON.stringify(app.swagger(), null, 2);
