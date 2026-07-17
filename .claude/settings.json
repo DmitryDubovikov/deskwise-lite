@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make check)",
+      "Bash(make test)",
+      "Bash(pnpm test *)",
+      "Bash(pnpm run check *)",
+      "Bash(pnpm vitest *)",
+      "Bash(pnpm biome *)",
+      "Bash(docker compose ps *)"
+    ]
+  }
+}
