@@ -1,7 +1,17 @@
-.PHONY: dev stop reinstall test check openapi
+.PHONY: dev stop reinstall test check openapi db-up db-down migrate
 
 dev:
 	cd api && pnpm dev
+
+# Postgres из docker-compose.yml (сервис db) — нужен для тестов и dev (DW_DATABASE_URL).
+db-up:
+	docker compose up -d db
+
+db-down:
+	docker compose down
+
+migrate:
+	cd api && pnpm db:migrate
 
 # Заглушить dev-сервер (tsx-watch), поднятый `make dev`. tsx поднимает дерево процессов
 # (watch-обёртка + дочерний слушатель порта), у которых в командной строке нет строки

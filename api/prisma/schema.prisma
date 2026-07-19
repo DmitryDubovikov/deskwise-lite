@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TicketStatus {
+  open
+  in_progress
+  resolved
+  closed
+}
+
+enum TicketPriority {
+  low
+  normal
+  high
+}
+
+model Ticket {
+  id       String         @id @default(uuid())
+  subject  String
+  body     String
+  status   TicketStatus   @default(open)
+  priority TicketPriority @default(normal)
+
+  @@index([status])
+}

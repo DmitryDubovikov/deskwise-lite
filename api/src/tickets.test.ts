@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildApp } from "./app.js";
+import type { PrismaClient } from "./generated/prisma/client.js";
 import type { Ticket } from "./schemas/ticket.js";
+import { prisma } from "./test-setup.js";
 
 const validBody = {
 	subject: "Missing items in order #4821",
@@ -9,7 +11,7 @@ const validBody = {
 
 describe("POST /tickets", () => {
 	it("creates a ticket with defaults from the schema", async () => {
-		const app = await buildApp();
+		const app = await buildApp({ prisma });
 
 		const response = await app.inject({
 			method: "POST",
@@ -26,7 +28,7 @@ describe("POST /tickets", () => {
 	});
 
 	it("rejects an invalid body with 400 automatically", async () => {
-		const app = await buildApp();
+		const app = await buildApp({ prisma });
 
 		const response = await app.inject({
 			method: "POST",
@@ -41,7 +43,7 @@ describe("POST /tickets", () => {
 
 describe("GET /tickets", () => {
 	it("filters by status", async () => {
-		const app = await buildApp();
+		const app = await buildApp({ prisma });
 		await app.inject({ method: "POST", url: "/tickets", payload: validBody });
 
 		const open = await app.inject({
@@ -60,7 +62,7 @@ describe("GET /tickets", () => {
 	});
 
 	it("rejects an unknown status with 400", async () => {
-		const app = await buildApp();
+		const app = await buildApp({ prisma });
 
 		const response = await app.inject({
 			method: "GET",
@@ -74,7 +76,7 @@ describe("GET /tickets", () => {
 
 describe("GET /tickets/:id", () => {
 	it("returns a created ticket by id", async () => {
-		const app = await buildApp();
+		const app = await buildApp({ prisma });
 		const created = await app.inject({
 			method: "POST",
 			url: "/tickets",
@@ -89,7 +91,7 @@ describe("GET /tickets/:id", () => {
 	});
 
 	it("returns 404 for an unknown id", async () => {
-		const app = await buildApp();
+		const app = await buildApp({ prisma });
 
 		const response = await app.inject({
 			method: "GET",
@@ -110,9 +112,13 @@ describe("buildApp(deps) with a fake store", () => {
 			status: "in_progress",
 			priority: "high",
 		};
-		const app = await buildApp({
-			ticketStore: new Map([[ticket.id, ticket]]),
-		});
+		const fakePrisma = {
+			ticket: {
+				findUnique: async ({ where }: { where: { id: string } }) =>
+					where.id === ticket.id ? ticket : null,
+			},
+		} as unknown as PrismaClient;
+		const app = await buildApp({ prisma: fakePrisma });
 
 		const response = await app.inject({
 			method: "GET",

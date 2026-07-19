@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buildApp } from "./app.js";
+import { prisma } from "./test-setup.js";
 
 describe("GET /health", () => {
 	it("returns ok status", async () => {
-		const app = await buildApp();
+		const app = await buildApp({ prisma });
 
 		const response = await app.inject({ method: "GET", url: "/health" });
 
@@ -13,17 +14,17 @@ describe("GET /health", () => {
 });
 
 describe("plugin encapsulation", () => {
-	it("keeps ticketStore invisible outside the tickets scope", async () => {
-		const app = await buildApp();
+	it("keeps prisma invisible outside the tickets scope", async () => {
+		const app = await buildApp({ prisma });
 		await app.ready();
 
-		expect(app.hasDecorator("ticketStore")).toBe(false);
+		expect(app.hasDecorator("prisma")).toBe(false);
 	});
 });
 
 describe("openapi spec", () => {
 	it("is generated without a listening server", async () => {
-		const app = await buildApp();
+		const app = await buildApp({ prisma });
 		await app.ready();
 
 		const spec = app.swagger();

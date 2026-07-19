@@ -7,7 +7,6 @@ import {
 } from "../schemas/error.js";
 import {
 	CreateTicketSchema,
-	type Ticket,
 	TicketSchema,
 	TicketStatusSchema,
 } from "../schemas/ticket.js";
@@ -22,12 +21,7 @@ export const ticketRoutes: FastifyPluginAsyncZod = async (app) => {
 			},
 		},
 		async (request, reply) => {
-			const ticket: Ticket = {
-				...request.body,
-				id: crypto.randomUUID(),
-				status: "open",
-			};
-			app.ticketStore.set(ticket.id, ticket);
+			const ticket = await app.prisma.ticket.create({ data: request.body });
 			return reply.code(201).send(ticket);
 		},
 	);
@@ -42,9 +36,10 @@ export const ticketRoutes: FastifyPluginAsyncZod = async (app) => {
 			},
 		},
 		async (request) => {
-			const all = [...app.ticketStore.values()];
 			const { status } = request.query;
-			return status ? all.filter((ticket) => ticket.status === status) : all;
+			return app.prisma.ticket.findMany({
+				where: status ? { status } : undefined,
+			});
 		},
 	);
 
@@ -61,7 +56,9 @@ export const ticketRoutes: FastifyPluginAsyncZod = async (app) => {
 			},
 		},
 		async (request, reply) => {
-			const ticket = app.ticketStore.get(request.params.id);
+			const ticket = await app.prisma.ticket.findUnique({
+				where: { id: request.params.id },
+			});
 			if (!ticket) {
 				return reply.code(404).send(errorBody("NOT_FOUND", "Ticket not found"));
 			}

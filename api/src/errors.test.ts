@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { buildApp } from "./app.js";
-import type { Ticket } from "./schemas/ticket.js";
+import type { PrismaClient } from "./generated/prisma/client.js";
+import { prisma } from "./test-setup.js";
 
 describe("error envelope (контракт №2)", () => {
 	it("maps malformed JSON to 400 VALIDATION_ERROR, not FST_* codes", async () => {
-		const app = await buildApp();
+		const app = await buildApp({ prisma });
 
 		const response = await app.inject({
 			method: "POST",
@@ -18,7 +19,7 @@ describe("error envelope (контракт №2)", () => {
 	});
 
 	it("wraps unknown routes as 404 NOT_FOUND", async () => {
-		const app = await buildApp();
+		const app = await buildApp({ prisma });
 
 		const response = await app.inject({ method: "GET", url: "/nope" });
 
@@ -27,12 +28,14 @@ describe("error envelope (контракт №2)", () => {
 	});
 
 	it("wraps handler exceptions as 500 without leaking details", async () => {
-		class ThrowingStore extends Map<string, Ticket> {
-			override get(_id: string): Ticket | undefined {
-				throw new Error("secret internal detail");
-			}
-		}
-		const app = await buildApp({ ticketStore: new ThrowingStore() });
+		const throwingPrisma = {
+			ticket: {
+				findUnique: async () => {
+					throw new Error("secret internal detail");
+				},
+			},
+		} as unknown as PrismaClient;
+		const app = await buildApp({ prisma: throwingPrisma });
 
 		const response = await app.inject({
 			method: "GET",
@@ -53,6 +56,7 @@ describe("structured logging", () => {
 	it("writes JSON lines with a reqId for each request", async () => {
 		const lines: string[] = [];
 		const app = await buildApp({
+			prisma,
 			logger: {
 				level: "info",
 				stream: {
@@ -74,7 +78,7 @@ describe("structured logging", () => {
 
 describe("openapi error schemas", () => {
 	it("documents the envelope on 400/404/500", async () => {
-		const app = await buildApp();
+		const app = await buildApp({ prisma });
 		await app.ready();
 
 		const spec = app.swagger();
@@ -88,7 +92,7 @@ describe("openapi error schemas", () => {
 
 describe("GET /docs", () => {
 	it("serves the swagger-ui page from the same spec", async () => {
-		const app = await buildApp();
+		const app = await buildApp({ prisma });
 
 		const response = await app.inject({ method: "GET", url: "/docs/" });
 

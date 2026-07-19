@@ -1,24 +1,24 @@
 import fp from "fastify-plugin";
-import type { Ticket } from "../schemas/ticket.js";
-
-// dw-lite: in-memory Map → Prisma-клиент (iter 4)
-export type TicketStore = Map<string, Ticket>;
+import type { PrismaClient } from "../generated/prisma/client.js";
 
 declare module "fastify" {
 	interface FastifyInstance {
-		ticketStore: TicketStore;
+		prisma: PrismaClient;
 	}
 }
 
-interface TicketStoreOptions {
-	store: TicketStore;
+interface PrismaPluginOptions {
+	prisma: PrismaClient;
 }
 
 // fastify-plugin снимает инкапсуляцию с самого плагина: декоратор ложится в контекст,
 // ГДЕ плагин зарегистрирован (tickets-скоуп в app.ts), и выше не протекает.
-export const ticketStorePlugin = fp<TicketStoreOptions>(
+export const prismaPlugin = fp<PrismaPluginOptions>(
 	async (app, opts) => {
-		app.decorate("ticketStore", opts.store);
+		app.decorate("prisma", opts.prisma);
+		app.addHook("onClose", async () => {
+			await opts.prisma.$disconnect();
+		});
 	},
-	{ name: "ticket-store" },
+	{ name: "prisma" },
 );

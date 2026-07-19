@@ -1,5 +1,6 @@
 import fastifySwagger from "@fastify/swagger";
 import fastifySwaggerUi from "@fastify/swagger-ui";
+import { PrismaPg } from "@prisma/adapter-pg";
 import Fastify, { type FastifyError, type FastifyServerOptions } from "fastify";
 import {
 	hasZodFastifySchemaValidationErrors,
@@ -8,13 +9,15 @@ import {
 	validatorCompiler,
 	type ZodTypeProvider,
 } from "fastify-type-provider-zod";
-import { type TicketStore, ticketStorePlugin } from "./plugins/ticket-store.js";
+import { loadConfig } from "./config.js";
+import { PrismaClient } from "./generated/prisma/client.js";
+import { prismaPlugin } from "./plugins/prisma.js";
 import { healthRoutes } from "./routes/health.js";
 import { ticketRoutes } from "./routes/tickets.js";
 import { errorBody } from "./schemas/error.js";
 
 export interface AppDeps {
-	ticketStore?: TicketStore;
+	prisma?: PrismaClient;
 	// Конфиг встроенного pino: false в тестах, JSON-лог с уровнем из config в проде
 	logger?: FastifyServerOptions["logger"];
 }
@@ -76,11 +79,15 @@ export async function buildApp(deps: AppDeps = {}) {
 
 	await app.register(healthRoutes);
 
-	// Инкапсулированный tickets-скоуп: store (fp-плагин) виден роутам-сиблингам
+	// Инкапсулированный tickets-скоуп: prisma (fp-плагин) виден роутам-сиблингам
 	// внутри скоупа, но не корню приложения — тест на инкапсуляцию держится за это.
 	await app.register(async (tickets) => {
-		await tickets.register(ticketStorePlugin, {
-			store: deps.ticketStore ?? new Map(),
+		await tickets.register(prismaPlugin, {
+			prisma:
+				deps.prisma ??
+				new PrismaClient({
+					adapter: new PrismaPg({ connectionString: loadConfig().databaseUrl }),
+				}),
 		});
 		await tickets.register(ticketRoutes);
 	});
