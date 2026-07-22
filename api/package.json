@@ -9,7 +9,8 @@
 		"typecheck": "tsc --noEmit",
 		"check": "pnpm lint && pnpm typecheck && pnpm test",
 		"postinstall": "prisma generate",
-		"db:migrate": "prisma migrate dev"
+		"db:migrate": "prisma migrate dev",
+		"db:seed": "prisma db seed"
 	},
 	"license": "ISC",
 	"type": "module",

@@ -1,6 +1,5 @@
 import fastifySwagger from "@fastify/swagger";
 import fastifySwaggerUi from "@fastify/swagger-ui";
-import { PrismaPg } from "@prisma/adapter-pg";
 import Fastify, { type FastifyError, type FastifyServerOptions } from "fastify";
 import {
 	hasZodFastifySchemaValidationErrors,
@@ -9,8 +8,8 @@ import {
 	validatorCompiler,
 	type ZodTypeProvider,
 } from "fastify-type-provider-zod";
-import { loadConfig } from "./config.js";
-import { PrismaClient } from "./generated/prisma/client.js";
+import { createPrismaClient } from "./db.js";
+import type { PrismaClient } from "./generated/prisma/client.js";
 import { prismaPlugin } from "./plugins/prisma.js";
 import { healthRoutes } from "./routes/health.js";
 import { ticketRoutes } from "./routes/tickets.js";
@@ -72,6 +71,25 @@ export async function buildApp(deps: AppDeps = {}) {
 			},
 		},
 		transform: jsonSchemaTransform,
+		// 204 по HTTP — без тела, но fastify-type-provider-zod сериализует z.null()
+		// в псевдо-content {enum: [null]} — вычищаем, иначе контракт обещает Orval
+		// JSON-тело, которого в ответе нет. transformObject правит и openapi.json
+		// (openapi:emit), и /docs — один источник, оба потребителя.
+		transformObject: (doc) => {
+			const spec =
+				"openapiObject" in doc ? doc.openapiObject : doc.swaggerObject;
+			for (const pathItem of Object.values(spec.paths ?? {})) {
+				for (const operation of Object.values(pathItem ?? {})) {
+					const noContent = (
+						operation as { responses?: Record<string, { content?: unknown }> }
+					).responses?.[204];
+					if (noContent) {
+						noContent.content = undefined;
+					}
+				}
+			}
+			return spec;
+		},
 	});
 
 	// Интерактивная страница из той же спеки — аналог /docs FastAPI
@@ -83,14 +101,12 @@ export async function buildApp(deps: AppDeps = {}) {
 	// внутри скоупа, но не корню приложения — тест на инкапсуляцию держится за это.
 	await app.register(async (tickets) => {
 		await tickets.register(prismaPlugin, {
-			prisma:
-				deps.prisma ??
-				new PrismaClient({
-					adapter: new PrismaPg({ connectionString: loadConfig().databaseUrl }),
-				}),
+			prisma: deps.prisma ?? createPrismaClient(),
 		});
 		await tickets.register(ticketRoutes);
 	});
 
 	return app;
 }
+
+export type App = Awaited<ReturnType<typeof buildApp>>;

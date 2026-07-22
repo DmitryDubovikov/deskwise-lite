@@ -1,4 +1,4 @@
-.PHONY: dev stop reinstall test check openapi db-up db-down migrate
+.PHONY: dev stop reinstall test check openapi db-up db-down migrate seed
 
 dev:
 	cd api && pnpm dev
@@ -12,6 +12,10 @@ db-down:
 
 migrate:
 	cd api && pnpm db:migrate
+
+# Идемпотентный seed ~30 тикетов (фиксированные id + upsert)
+seed:
+	cd api && pnpm db:seed
 
 # Заглушить dev-сервер (tsx-watch), поднятый `make dev`. tsx поднимает дерево процессов
 # (watch-обёртка + дочерний слушатель порта), у которых в командной строке нет строки

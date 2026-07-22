@@ -11,11 +11,12 @@ export const ErrorResponseSchema = z.object({
 
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
 
-// Контрактный словарь машинных кодов: новые коды (409 CONFLICT в iter 5) — сюда
+// Контрактный словарь машинных кодов
 export type ErrorCode =
 	| "VALIDATION_ERROR"
 	| "REQUEST_ERROR"
 	| "NOT_FOUND"
+	| "CONFLICT"
 	| "INTERNAL_SERVER_ERROR";
 
 export function errorBody(code: ErrorCode, message: string): ErrorResponse {

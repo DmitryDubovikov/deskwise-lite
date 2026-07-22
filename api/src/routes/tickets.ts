@@ -1,5 +1,7 @@
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
+import { canTransition } from "../domain/ticket-status.js";
+import { Prisma } from "../generated/prisma/client.js";
 import {
 	ErrorResponseSchema,
 	errorBody,
@@ -7,9 +9,22 @@ import {
 } from "../schemas/error.js";
 import {
 	CreateTicketSchema,
+	ListTicketsQuerySchema,
+	TicketListSchema,
 	TicketSchema,
-	TicketStatusSchema,
+	TransitionSchema,
+	UpdateTicketSchema,
 } from "../schemas/ticket.js";
+
+const IdParamsSchema = TicketSchema.pick({ id: true });
+
+const TICKET_NOT_FOUND = errorBody("NOT_FOUND", "Ticket not found");
+
+// P2025 — «запись не найдена» у атомарных update/delete: один запрос вместо
+// пары findUnique+мутация; канон 404 для мутаций в этом файле.
+const isRecordNotFound = (error: unknown) =>
+	error instanceof Prisma.PrismaClientKnownRequestError &&
+	error.code === "P2025";
 
 export const ticketRoutes: FastifyPluginAsyncZod = async (app) => {
 	app.post(
@@ -30,16 +45,24 @@ export const ticketRoutes: FastifyPluginAsyncZod = async (app) => {
 		"/tickets",
 		{
 			schema: {
-				querystring: z.object({ status: TicketStatusSchema.optional() }),
-				// dw-lite: голый массив → {items, total, page, limit} (контракт №5, iter 5)
-				response: { 200: z.array(TicketSchema), ...errorResponses },
+				querystring: ListTicketsQuerySchema,
+				response: { 200: TicketListSchema, ...errorResponses },
 			},
 		},
 		async (request) => {
-			const { status } = request.query;
-			return app.prisma.ticket.findMany({
-				where: status ? { status } : undefined,
-			});
+			const { status, page, limit } = request.query;
+			const where = status ? { status } : undefined;
+			// orderBy id — стабильный порядок страниц (createdAt нет: домен заморожен)
+			const [items, total] = await Promise.all([
+				app.prisma.ticket.findMany({
+					where,
+					orderBy: { id: "asc" },
+					skip: (page - 1) * limit,
+					take: limit,
+				}),
+				app.prisma.ticket.count({ where }),
+			]);
+			return { items, total, page, limit };
 		},
 	);
 
@@ -47,7 +70,7 @@ export const ticketRoutes: FastifyPluginAsyncZod = async (app) => {
 		"/tickets/:id",
 		{
 			schema: {
-				params: TicketSchema.pick({ id: true }),
+				params: IdParamsSchema,
 				response: {
 					200: TicketSchema,
 					404: ErrorResponseSchema,
@@ -60,9 +83,100 @@ export const ticketRoutes: FastifyPluginAsyncZod = async (app) => {
 				where: { id: request.params.id },
 			});
 			if (!ticket) {
-				return reply.code(404).send(errorBody("NOT_FOUND", "Ticket not found"));
+				return reply.code(404).send(TICKET_NOT_FOUND);
 			}
 			return ticket;
+		},
+	);
+
+	app.patch(
+		"/tickets/:id",
+		{
+			schema: {
+				params: IdParamsSchema,
+				body: UpdateTicketSchema,
+				response: {
+					200: TicketSchema,
+					404: ErrorResponseSchema,
+					...errorResponses,
+				},
+			},
+		},
+		async (request, reply) => {
+			try {
+				return await app.prisma.ticket.update({
+					where: { id: request.params.id },
+					data: request.body,
+				});
+			} catch (error) {
+				if (isRecordNotFound(error)) {
+					return reply.code(404).send(TICKET_NOT_FOUND);
+				}
+				throw error;
+			}
+		},
+	);
+
+	app.delete(
+		"/tickets/:id",
+		{
+			schema: {
+				params: IdParamsSchema,
+				response: {
+					204: z.null(),
+					404: ErrorResponseSchema,
+					...errorResponses,
+				},
+			},
+		},
+		async (request, reply) => {
+			try {
+				await app.prisma.ticket.delete({ where: { id: request.params.id } });
+			} catch (error) {
+				if (isRecordNotFound(error)) {
+					return reply.code(404).send(TICKET_NOT_FOUND);
+				}
+				throw error;
+			}
+			return reply.code(204).send(null);
+		},
+	);
+
+	// Переход статуса — только здесь (контракт №1): матрица — чистая domain-функция,
+	// недопустимый переход → 409 CONFLICT в envelope.
+	app.post(
+		"/tickets/:id/transition",
+		{
+			schema: {
+				params: IdParamsSchema,
+				body: TransitionSchema,
+				response: {
+					200: TicketSchema,
+					404: ErrorResponseSchema,
+					409: ErrorResponseSchema,
+					...errorResponses,
+				},
+			},
+		},
+		async (request, reply) => {
+			const { id } = request.params;
+			const { to } = request.body;
+			// findUnique нужен: canTransition требует текущий статус до мутации
+			const ticket = await app.prisma.ticket.findUnique({ where: { id } });
+			if (!ticket) {
+				return reply.code(404).send(TICKET_NOT_FOUND);
+			}
+			if (!canTransition(ticket.status, to)) {
+				return reply
+					.code(409)
+					.send(
+						errorBody(
+							"CONFLICT",
+							`Cannot transition ticket from '${ticket.status}' to '${to}'`,
+						),
+					);
+			}
+			return app.prisma.ticket.update({ where: { id }, data: { status: to } });
 		},
 	);
 };
