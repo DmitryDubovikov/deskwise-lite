@@ -30,6 +30,7 @@ import type {
   ListTicketsParams,
   Ticket,
   TicketList,
+  TicketSummary,
   TransitionRequestInput,
   UpdateTicketInput
 } from '../../schemas';
@@ -663,6 +664,99 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getTransitionTicketMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export type summarizeTicketResponse200 = {
+  data: TicketSummary
+  status: 200
+}
+
+export type summarizeTicketResponse400 = {
+  data: ErrorResponse
+  status: 400
+}
+
+export type summarizeTicketResponse404 = {
+  data: ErrorResponse
+  status: 404
+}
+
+export type summarizeTicketResponse500 = {
+  data: ErrorResponse
+  status: 500
+}
+    
+export type summarizeTicketResponseSuccess = (summarizeTicketResponse200) & {
+  headers: Headers;
+};
+export type summarizeTicketResponseError = (summarizeTicketResponse400 | summarizeTicketResponse404 | summarizeTicketResponse500) & {
+  headers: Headers;
+};
+
+export type summarizeTicketResponse = (summarizeTicketResponseSuccess | summarizeTicketResponseError)
+
+export const getSummarizeTicketUrl = (id: string,) => {
+
+
+  
+
+  return `/tickets/${id}/summarize`
+}
+
+export const summarizeTicket = async (id: string, options?: RequestInit): Promise<summarizeTicketResponse> => {
+  
+  return customFetch<summarizeTicketResponse>(getSummarizeTicketUrl(id),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+
+
+
+
+export const getSummarizeTicketMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof summarizeTicket>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof summarizeTicket>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['summarizeTicket'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof summarizeTicket>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  summarizeTicket(id,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SummarizeTicketMutationResult = NonNullable<Awaited<ReturnType<typeof summarizeTicket>>>
+    
+    export type SummarizeTicketMutationError = ErrorResponse
+
+    export const useSummarizeTicket = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof summarizeTicket>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof summarizeTicket>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getSummarizeTicketMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

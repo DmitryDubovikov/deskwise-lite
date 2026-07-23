@@ -10,15 +10,18 @@ summarize и SSE-стриминг suggest-reply.
 - Конституция — [CLAUDE.md](CLAUDE.md)
 - План итераций — [ROADMAP.md](ROADMAP.md)
 
-## Quickstart (по состоянию на iter 7 — full-stack за nginx + CI contract-drift gate)
+## Quickstart (по состоянию на iter 8 — AI-summarize в типизированном контракте)
 
 Нужны установленные `pnpm` (проект собирался на pnpm v11, Node v22) и Docker. Самый быстрый
-путь — весь стек в контейнерах:
+путь — весь стек в контейнерах. Перед `make up` нужен `api/.env`
+(`cd api && cp .env.example .env`): compose отдаёт его контейнеру api, а config-модуль
+требует `DW_OPENAI_*` — для кнопки Summarize впиши в него реальный `DW_OPENAI_API_KEY`
+(без ключа всё, кроме summarize, работает; вызов вернёт 500).
 
 ```bash
 make up       # docker compose up --build: nginx :8080 (SPA + прокси /api/) + api + Postgres
 make seed     # идемпотентный seed ~30 тикетов Fernwood Supplies (фиксированные id + upsert)
-# открой http://localhost:8080 — список тикетов, деталь, переходы статусов
+# открой http://localhost:8080 — список тикетов, деталь, переходы статусов, кнопка Summarize
 ```
 
 Для разработки — зависимости, env и цели из корневого `Makefile`:
@@ -72,6 +75,13 @@ CI (iter 7): GitHub Actions (`.github/workflows/ci.yml`) на каждый PR и
 краснит PR. Все три — required status checks в branch protection на `main`
 (сгенерённые `api/openapi.json` и `web/src/generated/` коммитятся осознанно — они вход
 гейта; «почему» — в `docs/iterations/07/`).
+
+AI (iter 8): `POST /tickets/:id/summarize` — официальный `openai` SDK (Responses API)
+входит в приложение плагином `openaiPlugin` тем же швом, что Prisma; эндпоинт описан
+Zod-схемой и живёт в общем контракте, поэтому кнопка Summarize в UI зовёт его через
+сгенерённый Orval-хук `useSummarizeTicket`. Детерминизм: `temperature=0` и пиннёный
+датированный снапшот (`DW_OPENAI_MODEL`, regex-гейт в config); в тестах и CI OpenAI —
+фейковый клиент через `buildApp`, сети и расходов нет.
 
 Подробности итераций — [docs/iterations/](docs/iterations/).
 

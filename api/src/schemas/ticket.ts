@@ -37,6 +37,14 @@ export const UpdateTicketSchema = z
 	.partial()
 	.meta({ id: "UpdateTicket" });
 
+// DTO summarize-ответа: summary не хранится в БД (домен заморожен, правило 3) —
+// считается по требованию и живёт только в контракте.
+export const TicketSummarySchema = z
+	.object({
+		summary: z.string(),
+	})
+	.meta({ id: "TicketSummary" });
+
 export const TransitionSchema = z
 	.object({
 		to: TicketStatusSchema,

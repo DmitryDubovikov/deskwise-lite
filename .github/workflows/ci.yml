@@ -40,6 +40,10 @@ jobs:
           --health-retries 10
     env:
       DW_DATABASE_URL: postgresql://dw:dw@localhost:5432/dw
+      # OpenAI в тестах всегда мок (контракт №7): ключ — заглушка, сети нет;
+      # config требует непустой ключ и датированный снапшот
+      DW_OPENAI_API_KEY: unused
+      DW_OPENAI_MODEL: gpt-fake-0000-00-00
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -78,9 +82,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # openapi:emit собирает buildApp() без слушающего сервера; config-модуль требует
-      # непустой DW_DATABASE_URL, но Prisma-клиент ленив — соединения не будет,
-      # поэтому значение — заведомо нерабочая заглушка
+      # непустые DW_DATABASE_URL / DW_OPENAI_*, но оба клиента ленивы — ни соединения,
+      # ни вызова не будет, поэтому значения — заведомо нерабочие заглушки
       DW_DATABASE_URL: postgresql://unused:unused@localhost:5432/unused
+      DW_OPENAI_API_KEY: unused
+      DW_OPENAI_MODEL: gpt-fake-0000-00-00
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4

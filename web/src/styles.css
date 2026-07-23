@@ -134,7 +134,8 @@ h1 {
 }
 
 .transitions button,
-.pager button {
+.pager button,
+.summarize button {
 	font: inherit;
 	padding: 0.35rem 0.75rem;
 	border: 1px solid #cbd2d9;
@@ -144,18 +145,34 @@ h1 {
 }
 
 .transitions button:hover:not(:disabled),
-.pager button:hover:not(:disabled) {
+.pager button:hover:not(:disabled),
+.summarize button:hover:not(:disabled) {
 	background: #eef2f6;
 }
 
 .transitions button:disabled,
-.pager button:disabled {
+.pager button:disabled,
+.summarize button:disabled {
 	opacity: 0.5;
 	cursor: default;
 }
 
 .body {
 	white-space: pre-wrap;
+}
+
+.summarize {
+	margin-top: 1rem;
+	display: grid;
+	gap: 0.5rem;
+	justify-items: start;
+}
+
+.summary {
+	background: #f0f9ff;
+	border-left: 3px solid #7dd3fc;
+	padding: 0.5rem 0.75rem;
+	border-radius: 6px;
 }
 
 .error {

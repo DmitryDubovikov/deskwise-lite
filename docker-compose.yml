@@ -3,6 +3,10 @@ services:
   # Наружу торчит только nginx; Postgres публикуется для локального dev/тестов.
   api:
     build: ./api
+    # Секреты (DW_OPENAI_API_KEY) и снапшот — из локального api/.env (вне git,
+    # контракт №4); environment: перекрывает env_file, поэтому DATABASE_URL
+    # ниже смотрит на сервис db, а не на localhost из .env
+    env_file: ./api/.env
     environment:
       DW_DATABASE_URL: postgresql://dw:dw@db:5432/dw
     depends_on:

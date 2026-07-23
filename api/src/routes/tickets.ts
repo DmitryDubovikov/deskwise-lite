@@ -12,11 +12,18 @@ import {
 	ListTicketsQuerySchema,
 	TicketListSchema,
 	TicketSchema,
+	TicketSummarySchema,
 	TransitionSchema,
 	UpdateTicketSchema,
 } from "../schemas/ticket.js";
 
 const IdParamsSchema = TicketSchema.pick({ id: true });
+
+// Промпт — константа в коде (правило 4): без реестров и шаблонизаторов.
+const SUMMARIZE_PROMPT =
+	"You are a support assistant at Fernwood Supplies, an office-supplies " +
+	"e-commerce store. Summarize the customer support ticket below in one or " +
+	"two plain sentences for a busy support agent. Reply with the summary only.";
 
 const TICKET_NOT_FOUND = errorBody("NOT_FOUND", "Ticket not found");
 
@@ -191,6 +198,38 @@ export const ticketRoutes: FastifyPluginAsyncZod = async (app) => {
 					);
 			}
 			return app.prisma.ticket.update({ where: { id }, data: { status: to } });
+		},
+	);
+
+	// AI-эндпоинт неотличим от обычного (красная нить iter 8): та же Zod-схема
+	// ответа → та же спека → тот же Orval-хук. Детерминизм — контракт №7.
+	app.post(
+		"/tickets/:id/summarize",
+		{
+			schema: {
+				tags: ["tickets"],
+				operationId: "summarizeTicket",
+				params: IdParamsSchema,
+				response: {
+					200: TicketSummarySchema,
+					404: ErrorResponseSchema,
+					...errorResponses,
+				},
+			},
+		},
+		async (request, reply) => {
+			const ticket = await app.prisma.ticket.findUnique({
+				where: { id: request.params.id },
+			});
+			if (!ticket) {
+				return reply.code(404).send(TICKET_NOT_FOUND);
+			}
+			const response = await app.ai.client.responses.create({
+				model: app.ai.model,
+				input: `${SUMMARIZE_PROMPT}\n\nSubject: ${ticket.subject}\n\n${ticket.body}`,
+				temperature: 0,
+			});
+			return { summary: response.output_text };
 		},
 	);
 };

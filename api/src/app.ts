@@ -9,8 +9,10 @@ import {
 	validatorCompiler,
 	type ZodTypeProvider,
 } from "fastify-type-provider-zod";
+import { createAiDeps } from "./ai.js";
 import { createPrismaClient } from "./db.js";
 import type { PrismaClient } from "./generated/prisma/client.js";
+import { type AiDeps, openaiPlugin } from "./plugins/openai.js";
 import { prismaPlugin } from "./plugins/prisma.js";
 import { healthRoutes } from "./routes/health.js";
 import { ticketRoutes } from "./routes/tickets.js";
@@ -18,6 +20,8 @@ import { errorBody } from "./schemas/error.js";
 
 export interface AppDeps {
 	prisma?: PrismaClient;
+	// OpenAI-клиент + пиннёный снапшот; в тестах — фейк (мок на границе, правило 4)
+	ai?: AiDeps;
 	// Конфиг встроенного pino: false в тестах, JSON-лог с уровнем из config в проде
 	logger?: FastifyServerOptions["logger"];
 }
@@ -107,6 +111,7 @@ export async function buildApp(deps: AppDeps = {}) {
 		await tickets.register(prismaPlugin, {
 			prisma: deps.prisma ?? createPrismaClient(),
 		});
+		await tickets.register(openaiPlugin, deps.ai ?? createAiDeps());
 		await tickets.register(ticketRoutes);
 	});
 

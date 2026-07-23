@@ -3,6 +3,7 @@ import {
 	getGetTicketQueryKey,
 	getListTicketsQueryKey,
 	useGetTicket,
+	useSummarizeTicket,
 	useTransitionTicket,
 } from "../generated/api/tickets/tickets";
 import { STATUS_VALUES } from "../lib/ticket-statuses";
@@ -24,7 +25,11 @@ export function TicketDetail({ id }: { id: string }) {
 			},
 		},
 	});
+	// AI-эндпоинт через тот же сгенерённый typed-хук, что и CRUD (красная нить iter 8)
+	const summarize = useSummarizeTicket();
 	const ticket = query.data?.status === 200 ? query.data.data : undefined;
+	const summary =
+		summarize.data?.status === 200 ? summarize.data.data.summary : undefined;
 
 	if (query.isPending) {
 		return (
@@ -54,6 +59,19 @@ export function TicketDetail({ id }: { id: string }) {
 				</span>
 			</p>
 			<p className="body">{ticket.body}</p>
+			<div className="summarize">
+				<button
+					type="button"
+					disabled={summarize.isPending}
+					onClick={() => summarize.mutate({ id })}
+				>
+					{summarize.isPending ? "Summarizing…" : "Summarize"}
+				</button>
+				{summary && <p className="summary">{summary}</p>}
+				{summarize.isError && (
+					<p className="error">{summarize.error.error.message}</p>
+				)}
+			</div>
 			{/* Матрица переходов живёт только в домене api: кнопки не фильтруются,
 			    недопустимый переход честно показывает 409 из envelope (№1/№2) */}
 			<div className="transitions">

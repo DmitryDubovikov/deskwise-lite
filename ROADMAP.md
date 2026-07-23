@@ -73,7 +73,7 @@
 | **5** ✅ | **REST-сборка** (учёбы почти ноль — сборка выученного) | Домен готов кормить героя-пайплайн | CRUD тикетов + `transition`-эндпоинт (state machine — чистая domain-функция, недопустимый переход → 409); фильтры + пагинация (контракт №5); `inject()`-тесты на CRUD/переходы/ошибки; seed ~30 тикетов; **домен заморожен** | DRF/FastAPI CRUD — делали десять раз |
 | **6** ✅ | **Фронт-пайплайн:** Vite, Orval, TanStack Query | **End-to-end type safety** (герой проекта) | `web/` (Vite+React, независимый пакет); Orval из `api/openapi.json` (конфиг из tutors: react-query, tags-split, customFetch) → typed hooks; UI: список (фильтр+пагинация), деталь, кнопки переходов; **демо: переименование поля в Zod-схеме → `tsc` в web падает**; nginx + полный compose (№6) | drf-spectacular → Orval из tutors — тот же пайплайн, источник другой |
 | **7** ✅ | **CI как продукт** (механика знакома — гейт нов) | **CI contract-drift gate** | Actions: biome + vitest (postgres service) + регенерация `openapi.json` и Orval-клиента + `git diff --exit-code`; branch protection; **демо: правка Zod-схемы без регенерации → PR красный**; докам — «почему коммитим сгенерённое» | eval-gate CI сиблингов; артефакт вместо пути |
-| **8** ⬜ | **OpenAI из Node** (SDK знаком идейно — новизна в интеграции) | **AI-эндпоинт неотличим от обычного в типизированном контракте** | `POST /tickets/:id/summarize`: openai SDK через декоратор (правило 6), `temperature=0`, пиннёный снапшот; Zod-схема ответа → спека → Orval-хук → кнопка в UI; тесты с мок-клиентом, CI без сети (№7) | requests → openai-python; мок на границе |
+| **8** ✅ | **OpenAI из Node** (SDK знаком идейно — новизна в интеграции) | **AI-эндпоинт неотличим от обычного в типизированном контракте** | `POST /tickets/:id/summarize`: openai SDK через декоратор (правило 6), `temperature=0`, пиннёный снапшот; Zod-схема ответа → спека → Orval-хук → кнопка в UI; тесты с мок-клиентом, CI без сети (№7) | requests → openai-python; мок на границе |
 | **9** ⬜ | **SSE и Node-стримы** — витринная сила Node | **SSE token streaming** | `suggest-reply`: стрим OpenAI → SSE-ответ Fastify; `curl -N` показывает токены (правило 8); ручной хук на фронте (осознанное исключение из автогена — задокументировать «почему»); токены дорисовываются в UI; nginx не буферизует (№6); мок-стрим в тестах | StreamingResponse из FastAPI — но здесь это родная стихия рантайма |
 | **10** ⬜ | — | Витрина | showcase-README по чек-листу ниже (память: showcase-workflow) | — |
 
@@ -92,6 +92,7 @@
 | Fastify-архитектура (плагины/инкапсуляция/декораторы, buildApp) | iter 2 |
 | End-to-end type safety (Orval typed client) | iter 6 |
 | CI contract-drift gate | iter 7 |
+| OpenAI typed JSON endpoint (summarize через общий контракт) | iter 8 |
 | SSE token streaming (OpenAI → React) | iter 9 |
 | Prisma/Postgres, pino, nginx, compose (стек-строка) | iter 3, 4, 6 |
 

@@ -2,21 +2,7 @@ import { describe, expect, it } from "vitest";
 import { type App, buildApp } from "./app.js";
 import type { PrismaClient } from "./generated/prisma/client.js";
 import type { Ticket } from "./schemas/ticket.js";
-import { prisma } from "./test-setup.js";
-
-const validBody = {
-	subject: "Missing items in order #4821",
-	body: "Two of the five stapler boxes were not in the parcel.",
-};
-
-async function createTicket(app: App) {
-	const response = await app.inject({
-		method: "POST",
-		url: "/tickets",
-		payload: validBody,
-	});
-	return response.json<Ticket>();
-}
+import { createTicket, prisma, validBody } from "./test-setup.js";
 
 describe("POST /tickets", () => {
 	it("creates a ticket with defaults from the schema", async () => {

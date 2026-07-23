@@ -26,6 +26,8 @@ export * from './ticketList';
 export * from './ticketListInput';
 export * from './ticketPriority';
 export * from './ticketStatus';
+export * from './ticketSummary';
+export * from './ticketSummaryInput';
 export * from './transitionRequest';
 export * from './transitionRequestInput';
 export * from './transitionRequestInputTo';

@@ -14,7 +14,9 @@ export function App() {
 			<main className="layout">
 				<TicketListPanel selectedId={selectedId} onSelect={setSelectedId} />
 				{selectedId ? (
-					<TicketDetail id={selectedId} />
+					// key: ремоунт при смене тикета сбрасывает состояние мутаций
+					// (summary/error тикета A не залипают под тикетом B)
+					<TicketDetail key={selectedId} id={selectedId} />
 				) : (
 					<section className="detail placeholder">
 						<p>Select a ticket to see details.</p>
