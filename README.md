@@ -1,27 +1,24 @@
 # deskwise-lite
 
-> **A schema-first, end-to-end-typed full-stack TypeScript app.** Support tickets for a
-> fictional office-supplies store (*Fernwood Supplies*) flow through a Fastify API where
-> **one Zod schema per route** drives runtime validation, static handler types, and the
-> OpenAPI spec — and an **Orval-generated react-query client** turns that spec into the
-> frontend's types. Rename a field on the backend and the frontend **fails to compile**;
-> ship a schema change without regenerating the contract and **CI blocks the merge**.
-> The domain is a fixture; **the contract is the product.**
+> **A support-ticket helpdesk with an AI copilot** for a fictional office-supplies store,
+> *Fernwood Supplies*. An agent works the queue with a status filter and pagination,
+> walks each ticket through its status flow, gets a one-click AI summary — and watches
+> an AI-drafted reply stream into the page token by token.
 
 <p align="center">
-  <img src="docs/assets/schema-to-hook.png" alt="Left: hand-written Zod schemas on a Fastify route. Right: the Orval-generated typed client and the UI consuming it. Between them: openapi.json, committed and never hand-edited." width="920">
+  <img src="docs/assets/ui-tickets.png" alt="The helpdesk UI: ticket list with status filter and pagination on the left; ticket detail with Summarize, Suggest reply and status-transition buttons on the right" width="920">
 </p>
 
-🧬 one **source of truth** — the Zod schema on the route · 🔗 a backend rename **breaks
-frontend compilation** · 🚦 contract drift **can't merge** (live red PR) · 📡 OpenAI tokens
-**stream over SSE** Fastify → React · 🧩 **no DI container** — Fastify plugins are the
-composition root · 🐳 one `docker compose up` behind nginx · 🆓 tests & CI mock OpenAI at
-the boundary — **no network, $0**
-
-**What this demonstrates:** engineering practices familiar from the Python world
-(FastAPI/Pydantic-style schema-first, thin handlers, pure domain functions, migrations,
-structured logging) **reproduced on a new runtime** — Node.js · TypeScript · Fastify ·
-Zod · Prisma · React. *The same engineering standard, another runtime.*
+The app is deliberately small — the engineering around it is the showcase: **one Zod
+schema per route** drives runtime validation, static handler types, and the OpenAPI spec;
+an **Orval-generated react-query client** turns that spec into the frontend's types, so a
+backend rename **fails frontend compilation** and a schema change without a regenerated
+contract **can't merge** (a CI contract-drift gate, with a live red PR to prove it). The
+AI features live in the same typed contract, and reply tokens **stream over SSE**.
+Practices familiar from the Python world — schema-first, thin handlers, pure domain
+functions, migrations, structured logging — **reproduced on a new runtime**:
+Node.js · TypeScript · Fastify · Zod · Prisma · React. *The same engineering standard,
+another runtime.*
 
 📸 **Showcase below** · 🚀 **[Run it](#run-it)** · 📚 **Per-iteration docs (Russian) → [docs/iterations/](docs/iterations/)**
 
@@ -56,10 +53,15 @@ flowchart LR
 
 ## Schema-first — one Zod schema: validation, types, spec
 
-The hero image above is the whole idea in one frame: the hand-written side is only the Zod
-schema and the route registration; everything on the right — `Ticket`, `TicketList`,
-`useListTickets` — is generated from `api/openapi.json`. The same schema also answers for
-bad input at runtime — nobody wrote this 400:
+One frame shows the whole idea — the hand-written side is only the Zod schema and the
+route registration; everything on the right — `Ticket`, `TicketList`, `useListTickets` —
+is generated from `api/openapi.json`:
+
+<p align="center">
+  <img src="docs/assets/schema-to-hook.png" alt="Left: hand-written Zod schemas on a Fastify route. Right: the Orval-generated typed client and the UI consuming it. Between them: openapi.json, committed and never hand-edited." width="920">
+</p>
+
+The same schema also answers for bad input at runtime — nobody wrote this 400:
 
 ```
 $ curl -s -X POST localhost:8080/api/tickets -H 'content-type: application/json' -d '{"subject":"x"}'
@@ -103,10 +105,9 @@ against the regenerated truth **is** the assertion.
 
 ## The app — typed hooks all the way to the buttons
 
-The React UI (Vite + TanStack Query) is built entirely on the generated hooks — list with
-filter and offset pagination, detail, status transitions, and the two AI actions:
-
-![Ticket list with status filter and pagination on the left; ticket detail with Summarize, Suggest reply and transition buttons on the right](docs/assets/ui-tickets.png)
+The UI at the top of this page (Vite + TanStack Query) is built entirely on the generated
+hooks — list with filter and offset pagination, detail, status transitions, and the two
+AI actions. No DTO type in `web/` is written by hand.
 
 The status state machine (`open → in_progress → resolved → closed`, plus
 `resolved → in_progress` reopen) lives in **one pure domain function** — there is no
@@ -242,20 +243,15 @@ domain/pure functions, I/O through decorated clients); env is read **only** in
 Prisma. `web/` and `api/` are two independent packages with their own lockfiles — no
 workspaces, because the only sanctioned bridge is `openapi.json`.
 
-## Relation to the sibling -lite projects
+## The Python analog map
 
-Sixth in the series — and an inversion. The five siblings are Python-stack ML/LLM projects
-where the *object of measurement* was new and the tools were reused:
-[policywise-lite](https://github.com/DmitryDubovikov/policywise-lite) (RAG QA),
-[dossier-lite](https://github.com/DmitryDubovikov/dossier-lite) (multi-agent),
-[sentiment-mlops](https://github.com/DmitryDubovikov/sentiment-mlops) (supervised MLOps),
-[triagewise-lite](https://github.com/DmitryDubovikov/triagewise-lite) (LLMOps over a single
-call), [authwise-lite](https://github.com/DmitryDubovikov/authwise-lite) (trajectory eval).
-Here the **equipment itself is new** — runtime, language, framework — so every concept was
-deliberately mapped to a known Python analog: Fastify ≈ FastAPI, Zod ≈ Pydantic,
-Prisma ≈ SQLAlchemy + Alembic, `vitest` + `inject()` ≈ pytest + TestClient,
-pino ≈ structlog. AI stays a feature of the fixture, not the axis: no LangChain, no evals,
-no prompt registries — the LLM-ops territory belongs to the siblings.
+The runtime is new here on purpose — and the fastest way to hold new equipment to an
+existing engineering standard is to map every concept to a known analog. Each choice in
+this codebase has one: Fastify ≈ FastAPI (schema on the route → validation + types +
+spec), Zod ≈ Pydantic, Prisma ≈ SQLAlchemy + Alembic, `vitest` + `inject()` ≈
+pytest + TestClient, pino ≈ structlog. AI stays a feature of the fixture, not the axis:
+no LangChain, no evals, no prompt registries — two generative helpers behind the same
+seams as everything else.
 
 ## Run it
 
