@@ -6,7 +6,7 @@
 > an AI-drafted reply stream into the page token by token.
 
 <p align="center">
-  <img src="docs/assets/ui-tickets.png" alt="The helpdesk UI: ticket list with status filter and pagination on the left; ticket detail with Summarize, Suggest reply and status-transition buttons on the right" width="920">
+  <img src="docs/assets/ui-tickets.png" alt="The helpdesk UI: ticket queue with status filter and pagination on the left; on the right a ticket detail with an AI-generated summary, an AI-drafted reply (streamed in over SSE) and status-transition buttons" width="920">
 </p>
 
 The app is deliberately small — the engineering around it is the showcase: **one Zod
