@@ -14,6 +14,7 @@ export const TicketSchema = z
 		body: z.string().min(1),
 		status: TicketStatusSchema,
 		priority: TicketPrioritySchema,
+		assignee: z.string().optional(),
 	})
 	.meta({ id: "Ticket" });
 
