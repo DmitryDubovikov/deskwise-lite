@@ -1,7 +1,10 @@
+import { Readable } from "node:stream";
+import type { FastifyBaseLogger } from "fastify";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { canTransition } from "../domain/ticket-status.js";
 import { Prisma } from "../generated/prisma/client.js";
+import type { ResponseStreamEventLike } from "../plugins/openai.js";
 import {
 	ErrorResponseSchema,
 	errorBody,
@@ -25,7 +28,41 @@ const SUMMARIZE_PROMPT =
 	"e-commerce store. Summarize the customer support ticket below in one or " +
 	"two plain sentences for a busy support agent. Reply with the summary only.";
 
+const SUGGEST_REPLY_PROMPT =
+	"You are a support agent at Fernwood Supplies, an office-supplies " +
+	"e-commerce store. Draft a short, polite reply to the customer support " +
+	"ticket below. Reply with the draft only.";
+
 const TICKET_NOT_FOUND = errorBody("NOT_FOUND", "Ticket not found");
+
+// Формат подачи тикета модели — один на оба AI-эндпоинта, чтобы не разъезжался
+const ticketInput = (
+	prompt: string,
+	ticket: { subject: string; body: string },
+) => `${prompt}\n\nSubject: ${ticket.subject}\n\n${ticket.body}`;
+
+// SSE-кадры wire-формата спеки 09: дельты текста → data: {"delta":…}, конец —
+// data: [DONE]. Ошибка ПОСЛЕ старта стрима: статус 200 уже ушёл клиенту, HTTP-код
+// не сменить — едет кадром event: error с тем же envelope (№2), фронт его парсит.
+async function* sseFrames(
+	events: AsyncIterable<ResponseStreamEventLike>,
+	log: FastifyBaseLogger,
+) {
+	try {
+		for await (const event of events) {
+			if (event.type === "response.output_text.delta" && event.delta) {
+				yield `data: ${JSON.stringify({ delta: event.delta })}\n\n`;
+			}
+		}
+		yield "data: [DONE]\n\n";
+	} catch (error) {
+		// Мимо setErrorHandler — значит, и логирование (канон iter 3) здесь руками
+		log.error({ err: error }, "ai stream failed");
+		yield `event: error\ndata: ${JSON.stringify(
+			errorBody("STREAM_ERROR", "AI stream failed"),
+		)}\n\n`;
+	}
+}
 
 // P2025 — «запись не найдена» у атомарных update/delete: один запрос вместо
 // пары findUnique+мутация; канон 404 для мутаций в этом файле.
@@ -226,10 +263,42 @@ export const ticketRoutes: FastifyPluginAsyncZod = async (app) => {
 			}
 			const response = await app.ai.client.responses.create({
 				model: app.ai.model,
-				input: `${SUMMARIZE_PROMPT}\n\nSubject: ${ticket.subject}\n\n${ticket.body}`,
+				input: ticketInput(SUMMARIZE_PROMPT, ticket),
 				temperature: 0,
 			});
 			return { summary: response.output_text };
+		},
+	);
+
+	// SSE-стриминг (красная нить iter 9) — осознанно ВНЕ OpenAPI (заметка №6
+	// ROADMAP): спека/Orval стриминг не описывают, hide прячет роут из контракта,
+	// клиент на фронте ручной. Zod-валидация params при этом живёт. Ответ — стрим
+	// мимо Zod-сериализатора: Fastify пайпит Readable как есть.
+	app.post(
+		"/tickets/:id/suggest-reply",
+		{
+			schema: {
+				hide: true,
+				params: IdParamsSchema,
+			},
+		},
+		async (request, reply) => {
+			const ticket = await app.prisma.ticket.findUnique({
+				where: { id: request.params.id },
+			});
+			// До первого кадра это обычный JSON-ответ: 404 в envelope как у всех
+			if (!ticket) {
+				return reply.code(404).send(TICKET_NOT_FOUND);
+			}
+			const events = app.ai.client.responses.stream({
+				model: app.ai.model,
+				input: ticketInput(SUGGEST_REPLY_PROMPT, ticket),
+				temperature: 0,
+			});
+			return reply
+				.header("content-type", "text/event-stream")
+				.header("cache-control", "no-cache")
+				.send(Readable.from(sseFrames(events, request.log)));
 		},
 	);
 };

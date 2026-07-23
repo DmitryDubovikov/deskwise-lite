@@ -16,6 +16,25 @@ export class ApiError extends Error implements ErrorResponse {
 	}
 }
 
+// Префикс, который срезает прокси (Vite dev и nginx — контракт №6). Единственная
+// точка знания о нём; ручной SSE-хук suggest-reply использует её же.
+export const API_PREFIX = "/api";
+
+// Не-ok ответ → ApiError из envelope (или fallback, если тела нет). Шарится с
+// ручным SSE-хуком: до старта стрима его ошибки — та же JSON-форма.
+export async function errorFromResponse(response: Response): Promise<ApiError> {
+	const body = (await response
+		.json()
+		.catch(() => null)) as ErrorResponse | null;
+	return new ApiError(
+		response.status,
+		body?.error ?? {
+			code: "UNKNOWN",
+			message: `HTTP ${response.status} ${response.statusText}`,
+		},
+	);
+}
+
 export async function customFetch<T>(
 	url: string,
 	options: RequestInit = {},
@@ -25,7 +44,7 @@ export async function customFetch<T>(
 	// отказ fetch (TypeError без .error) оборачивается здесь же.
 	let response: Response;
 	try {
-		response = await fetch(`/api${url}`, {
+		response = await fetch(`${API_PREFIX}${url}`, {
 			...options,
 			headers: {
 				...(options.body ? { "Content-Type": "application/json" } : {}),
@@ -41,16 +60,7 @@ export async function customFetch<T>(
 	}
 
 	if (!response.ok) {
-		const body = (await response
-			.json()
-			.catch(() => null)) as ErrorResponse | null;
-		throw new ApiError(
-			response.status,
-			body?.error ?? {
-				code: "UNKNOWN",
-				message: `HTTP ${response.status} ${response.statusText}`,
-			},
-		);
+		throw await errorFromResponse(response);
 	}
 
 	// 204 — без тела (DELETE)

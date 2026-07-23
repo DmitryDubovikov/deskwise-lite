@@ -15,12 +15,15 @@ export const ErrorResponseSchema = z
 
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
 
-// Контрактный словарь машинных кодов
+// Контрактный словарь машинных кодов.
+// STREAM_ERROR — единственный код вне HTTP-статусов: ошибка ПОСЛЕ старта
+// SSE-стрима (200 уже ушёл) едет кадром event: error с тем же envelope.
 export type ErrorCode =
 	| "VALIDATION_ERROR"
 	| "REQUEST_ERROR"
 	| "NOT_FOUND"
 	| "CONFLICT"
+	| "STREAM_ERROR"
 	| "INTERNAL_SERVER_ERROR";
 
 export function errorBody(code: ErrorCode, message: string): ErrorResponse {

@@ -1,30 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { buildApp } from "./app.js";
-import type { AiDeps } from "./plugins/openai.js";
-import { createTicket, prisma } from "./test-setup.js";
-
-// Мок на границе (правило 4, контракт №7): фейк реализует узкий интерфейс
-// плагина — ни сети, ни каста; заодно захватывает параметры вызова.
-function fakeAi(summary: string) {
-	const calls: Array<{ model: string; input: string; temperature: number }> =
-		[];
-	const ai: AiDeps = {
-		model: "gpt-fake-0000-00-00",
-		client: {
-			responses: {
-				create: async (params) => {
-					calls.push(params);
-					return { output_text: summary };
-				},
-			},
-		},
-	};
-	return { ai, calls };
-}
+import { createTicket, fakeAi, prisma } from "./test-setup.js";
 
 describe("POST /tickets/:id/summarize", () => {
 	it("returns the summary from the AI client for an existing ticket", async () => {
-		const { ai, calls } = fakeAi("Customer is missing two stapler boxes.");
+		const { ai, calls } = fakeAi({
+			text: "Customer is missing two stapler boxes.",
+		});
 		const app = await buildApp({ prisma, ai });
 		const ticket = await createTicket(app);
 
@@ -49,7 +31,7 @@ describe("POST /tickets/:id/summarize", () => {
 	});
 
 	it("returns 404 in the envelope without calling the AI client", async () => {
-		const { ai, calls } = fakeAi("should never be produced");
+		const { ai, calls } = fakeAi({ text: "should never be produced" });
 		const app = await buildApp({ prisma, ai });
 
 		const response = await app.inject({

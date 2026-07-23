@@ -10,18 +10,19 @@ summarize и SSE-стриминг suggest-reply.
 - Конституция — [CLAUDE.md](CLAUDE.md)
 - План итераций — [ROADMAP.md](ROADMAP.md)
 
-## Quickstart (по состоянию на iter 8 — AI-summarize в типизированном контракте)
+## Quickstart (по состоянию на iter 9 — SSE-стриминг suggest-reply)
 
 Нужны установленные `pnpm` (проект собирался на pnpm v11, Node v22) и Docker. Самый быстрый
 путь — весь стек в контейнерах. Перед `make up` нужен `api/.env`
 (`cd api && cp .env.example .env`): compose отдаёт его контейнеру api, а config-модуль
-требует `DW_OPENAI_*` — для кнопки Summarize впиши в него реальный `DW_OPENAI_API_KEY`
-(без ключа всё, кроме summarize, работает; вызов вернёт 500).
+требует `DW_OPENAI_*` — для кнопок Summarize и Suggest reply впиши в него реальный
+`DW_OPENAI_API_KEY` (без ключа всё, кроме AI-кнопок, работает; их вызов вернёт ошибку).
 
 ```bash
 make up       # docker compose up --build: nginx :8080 (SPA + прокси /api/) + api + Postgres
 make seed     # идемпотентный seed ~30 тикетов Fernwood Supplies (фиксированные id + upsert)
-# открой http://localhost:8080 — список тикетов, деталь, переходы статусов, кнопка Summarize
+# открой http://localhost:8080 — список тикетов, деталь, переходы статусов,
+# кнопки Summarize и Suggest reply (черновик дорисовывается стримом)
 ```
 
 Для разработки — зависимости, env и цели из корневого `Makefile`:
@@ -82,6 +83,13 @@ Zod-схемой и живёт в общем контракте, поэтому 
 сгенерённый Orval-хук `useSummarizeTicket`. Детерминизм: `temperature=0` и пиннёный
 датированный снапшот (`DW_OPENAI_MODEL`, regex-гейт в config); в тестах и CI OpenAI —
 фейковый клиент через `buildApp`, сети и расходов нет.
+
+SSE-стриминг (iter 9): `POST /tickets/:id/suggest-reply` стримит черновик ответа клиенту
+токен за токеном — стрим OpenAI переливается в SSE-кадры `data: {"delta":…}` async-генератором
+и уезжает Node-стримом (`curl -N` показывает кадры по мере генерации). Эндпоинт осознанно
+скрыт из `openapi.json` (OpenAPI/Orval стриминг не описывают), клиент на фронте — ручной хук
+`useSuggestReplyStream`; nginx проксирует этот URI с `proxy_buffering off`, ошибка посреди
+стрима едет кадром `event: error` в общем envelope.
 
 Подробности итераций — [docs/iterations/](docs/iterations/).
 

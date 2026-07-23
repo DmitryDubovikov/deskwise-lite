@@ -135,7 +135,7 @@ h1 {
 
 .transitions button,
 .pager button,
-.summarize button {
+.ai-action button {
 	font: inherit;
 	padding: 0.35rem 0.75rem;
 	border: 1px solid #cbd2d9;
@@ -146,13 +146,13 @@ h1 {
 
 .transitions button:hover:not(:disabled),
 .pager button:hover:not(:disabled),
-.summarize button:hover:not(:disabled) {
+.ai-action button:hover:not(:disabled) {
 	background: #eef2f6;
 }
 
 .transitions button:disabled,
 .pager button:disabled,
-.summarize button:disabled {
+.ai-action button:disabled {
 	opacity: 0.5;
 	cursor: default;
 }
@@ -161,18 +161,31 @@ h1 {
 	white-space: pre-wrap;
 }
 
-.summarize {
+.ai-action {
 	margin-top: 1rem;
 	display: grid;
 	gap: 0.5rem;
 	justify-items: start;
 }
 
-.summary {
-	background: #f0f9ff;
-	border-left: 3px solid #7dd3fc;
+/* Карточки AI-вывода: общая геометрия, различие — только акцент цветом */
+.summary,
+.reply {
 	padding: 0.5rem 0.75rem;
 	border-radius: 6px;
+	border-left: 3px solid;
+	white-space: pre-wrap;
+}
+
+.summary {
+	background: #f0f9ff;
+	border-left-color: #7dd3fc;
+}
+
+/* Стримящийся черновик ответа (suggest-reply) — зелёный акцент */
+.reply {
+	background: #f0fdf4;
+	border-left-color: #86efac;
 }
 
 .error {
