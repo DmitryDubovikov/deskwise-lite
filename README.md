@@ -10,7 +10,7 @@ summarize и SSE-стриминг suggest-reply.
 - Конституция — [CLAUDE.md](CLAUDE.md)
 - План итераций — [ROADMAP.md](ROADMAP.md)
 
-## Quickstart (по состоянию на iter 6 — full-stack: SPA за nginx + typed-клиент из спеки)
+## Quickstart (по состоянию на iter 7 — full-stack за nginx + CI contract-drift gate)
 
 Нужны установленные `pnpm` (проект собирался на pnpm v11, Node v22) и Docker. Самый быстрый
 путь — весь стек в контейнерах:
@@ -64,6 +64,14 @@ react-query-хуки генерит Orval из закоммиченного `api
 (end-to-end type safety). UI — список тикетов с фильтром и пагинацией, деталь и кнопки
 переходов (недопустимый переход показывает 409 из envelope). В полном стеке (`make up`)
 nginx на `:8080` раздаёт статику и проксирует `/api/` → `api:3000`.
+
+CI (iter 7): GitHub Actions (`.github/workflows/ci.yml`) на каждый PR и push в `main` —
+три джобы, зеркалящие Makefile: `api` (biome + tsc + vitest на postgres service container),
+`web` (biome + tsc против закоммиченного Orval-клиента) и `contract-drift` —
+`make generate` + `git diff --exit-code`: правка Zod-схемы без регенерации контракта
+краснит PR. Все три — required status checks в branch protection на `main`
+(сгенерённые `api/openapi.json` и `web/src/generated/` коммитятся осознанно — они вход
+гейта; «почему» — в `docs/iterations/07/`).
 
 Подробности итераций — [docs/iterations/](docs/iterations/).
 

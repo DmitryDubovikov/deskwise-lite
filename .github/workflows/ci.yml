@@ -1,0 +1,111 @@
+# CI зеркалит Makefile (make check / make generate), а не изобретает свои команды.
+# Три джобы = три required status checks в branch protection на main:
+#   api            — линт + типы + vitest на реальном Postgres (service container, №5 заметок)
+#   web            — линт + типы (Orval-клиент уже в git — это вход drift-гейта)
+#   contract-drift — регенерация openapi.json + Orval-клиента обязана дать пустой diff:
+#                    правка Zod-схемы без регенерации → PR красный (красная нить iter 7)
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Отмена устаревших прогонов — только для PR: на main каждый коммит получает
+# полный вердикт (история статусов не дырявится «cancelled»)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    services:
+      # Держать в синхроне с сервисом db в docker-compose.yml (image/креды/healthcheck)
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: dw
+          POSTGRES_PASSWORD: dw
+          POSTGRES_DB: dw
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dw -d dw"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DW_DATABASE_URL: postgresql://dw:dw@localhost:5432/dw
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: api/package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: api/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      # Миграция — до pnpm check (vitest ходит в реальный Postgres); состав проверок
+      # живёт только в package.json `check` — CI его не дублирует
+      - run: pnpm exec prisma migrate deploy
+      - run: pnpm check
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: web/package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+
+  contract-drift:
+    runs-on: ubuntu-latest
+    env:
+      # openapi:emit собирает buildApp() без слушающего сервера; config-модуль требует
+      # непустой DW_DATABASE_URL, но Prisma-клиент ленив — соединения не будет,
+      # поэтому значение — заведомо нерабочая заглушка
+      DW_DATABASE_URL: postgresql://unused:unused@localhost:5432/unused
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          # api и web — независимые пакеты (правило 5); оба пиннят один pnpm,
+          # версию берём из api и ставим им обоим
+          package_json_file: api/package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: |
+            api/pnpm-lock.yaml
+            web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: api
+      - run: pnpm install --frozen-lockfile
+        working-directory: web
+      # Тот же пайплайн, что у разработчика локально: openapi.json → Orval-клиент
+      - run: make generate
+      # Сам гейт: регенерённые артефакты обязаны совпасть с закоммиченными.
+      # add -A перед diff --cached — чтобы поймать и новые/удалённые файлы
+      # (обычный git diff не видит untracked); в индексе только эти пути,
+      # поэтому diff без повторного списка.
+      - name: contract drift check
+        run: |
+          git add -A api/openapi.json web/src/generated
+          git diff --cached --exit-code
