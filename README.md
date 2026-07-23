@@ -9,9 +9,9 @@
   <img src="docs/assets/ui-tickets.png" alt="The helpdesk UI: ticket queue with status filter and pagination on the left; on the right a ticket detail with an AI-generated summary, an AI-drafted reply (streamed in over SSE) and status-transition buttons" width="920">
 </p>
 
-The app is deliberately small — the engineering around it is the showcase: **one Zod
-schema per route** drives runtime validation, static handler types, and the OpenAPI spec;
-an **Orval-generated react-query client** turns that spec into the frontend's types, so a
+Under the hood, a single source of truth runs the whole stack: **the Zod schema on each
+route** yields runtime validation, static handler types, and the OpenAPI spec; an
+**Orval-generated react-query client** turns that spec into the frontend's types, so a
 backend rename **fails frontend compilation** and a schema change without a regenerated
 contract **can't merge** (a CI contract-drift gate, with a live red PR to prove it). The
 AI features live in the same typed contract, and reply tokens **stream over SSE**.
@@ -249,9 +249,9 @@ The runtime is new here on purpose — and the fastest way to hold new equipment
 existing engineering standard is to map every concept to a known analog. Each choice in
 this codebase has one: Fastify ≈ FastAPI (schema on the route → validation + types +
 spec), Zod ≈ Pydantic, Prisma ≈ SQLAlchemy + Alembic, `vitest` + `inject()` ≈
-pytest + TestClient, pino ≈ structlog. AI stays a feature of the fixture, not the axis:
-no LangChain, no evals, no prompt registries — two generative helpers behind the same
-seams as everything else.
+pytest + TestClient, pino ≈ structlog. AI is a product feature here, not the project's
+axis: no LangChain, no evals, no prompt registries — two generative features behind the
+same seams as everything else.
 
 ## Run it
 
@@ -284,10 +284,9 @@ make openapi  # emit api/openapi.json from the Zod route schemas
 make generate # the whole contract pipeline: openapi.json → Orval → web/src/generated/
 ```
 
-Honest footnotes: all endpoints are public — auth/JWT was consciously cut as not paying
-its way for this project's goal; the AI features are generative on purpose
-(summarize / suggest-reply, not classification). Total OpenAI spend for the whole project,
-demos included: **well under $1**.
+Scope notes: the API is open by design — no auth layer, so every demo above is one `curl`
+away; the AI features are generative by design (summarize / suggest-reply). Total OpenAI
+spend for the whole project, demos included: **well under $1**.
 
 ## What this puts on a résumé
 
