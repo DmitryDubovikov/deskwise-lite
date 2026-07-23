@@ -4,6 +4,7 @@ import Fastify, { type FastifyError, type FastifyServerOptions } from "fastify";
 import {
 	hasZodFastifySchemaValidationErrors,
 	jsonSchemaTransform,
+	jsonSchemaTransformObject,
 	serializerCompiler,
 	validatorCompiler,
 	type ZodTypeProvider,
@@ -71,13 +72,16 @@ export async function buildApp(deps: AppDeps = {}) {
 			},
 		},
 		transform: jsonSchemaTransform,
-		// 204 по HTTP — без тела, но fastify-type-provider-zod сериализует z.null()
-		// в псевдо-content {enum: [null]} — вычищаем, иначе контракт обещает Orval
-		// JSON-тело, которого в ответе нет. transformObject правит и openapi.json
-		// (openapi:emit), и /docs — один источник, оба потребителя.
+		// Два шага над готовым документом:
+		// 1) jsonSchemaTransformObject — схемы с .meta({id}) из zod-реестра →
+		//    components/schemas + $ref (именованные типы у Orval);
+		// 2) 204 по HTTP — без тела, но fastify-type-provider-zod сериализует z.null()
+		//    в псевдо-content {enum: [null]} — вычищаем, иначе контракт обещает Orval
+		//    JSON-тело, которого в ответе нет.
+		// transformObject правит и openapi.json (openapi:emit), и /docs —
+		// один источник, оба потребителя.
 		transformObject: (doc) => {
-			const spec =
-				"openapiObject" in doc ? doc.openapiObject : doc.swaggerObject;
+			const spec = jsonSchemaTransformObject(doc);
 			for (const pathItem of Object.values(spec.paths ?? {})) {
 				for (const operation of Object.values(pathItem ?? {})) {
 					const noContent = (

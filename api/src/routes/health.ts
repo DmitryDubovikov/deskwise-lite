@@ -7,6 +7,8 @@ export const healthRoutes: FastifyPluginAsyncZod = async (app) => {
 		"/health",
 		{
 			schema: {
+				tags: ["health"],
+				operationId: "getHealth",
 				response: {
 					200: z.object({ status: z.literal("ok") }),
 					500: ErrorResponseSchema,

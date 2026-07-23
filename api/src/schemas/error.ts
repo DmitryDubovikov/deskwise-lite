@@ -2,12 +2,16 @@ import { z } from "zod";
 
 // Единый envelope ошибок (контракт №2): {"error": {"code", "message"}}.
 // dw-lite: envelope → RFC 9457 problem+json — зафиксированный не-апгрейд.
-export const ErrorResponseSchema = z.object({
-	error: z.object({
-		code: z.string(),
-		message: z.string(),
-	}),
-});
+// .meta({id}) кладёт схему в zod-реестр → components/schemas + $ref в спеке
+// (jsonSchemaTransformObject в app.ts) → именованный тип у Orval.
+export const ErrorResponseSchema = z
+	.object({
+		error: z.object({
+			code: z.string(),
+			message: z.string(),
+		}),
+	})
+	.meta({ id: "ErrorResponse" });
 
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
 

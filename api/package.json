@@ -1,6 +1,7 @@
 {
 	"name": "api",
 	"version": "1.0.0",
+	"packageManager": "pnpm@11.13.1",
 	"scripts": {
 		"dev": "tsx watch src/index.ts",
 		"openapi:emit": "tsx scripts/emit-openapi.ts",

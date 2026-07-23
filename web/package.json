@@ -1,0 +1,30 @@
+{
+	"name": "web",
+	"version": "1.0.0",
+	"private": true,
+	"packageManager": "pnpm@11.13.1",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "tsc --noEmit && vite build",
+		"preview": "vite preview",
+		"generate:api": "orval",
+		"lint": "biome check .",
+		"typecheck": "tsc --noEmit",
+		"check": "pnpm lint && pnpm typecheck"
+	},
+	"dependencies": {
+		"@tanstack/react-query": "^5.90.2",
+		"react": "^19.2.0",
+		"react-dom": "^19.2.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.5.4",
+		"@types/react": "^19.2.0",
+		"@types/react-dom": "^19.2.0",
+		"@vitejs/plugin-react": "^5.0.0",
+		"orval": "^7.13.0",
+		"typescript": "^7.0.2",
+		"vite": "^7.1.0"
+	}
+}

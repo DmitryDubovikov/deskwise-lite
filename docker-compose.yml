@@ -1,4 +1,21 @@
 services:
+  # Полный стек (контракт №6): web(nginx :8080) → api:3000 → db.
+  # Наружу торчит только nginx; Postgres публикуется для локального dev/тестов.
+  api:
+    build: ./api
+    environment:
+      DW_DATABASE_URL: postgresql://dw:dw@db:5432/dw
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build: ./web
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api
+
   db:
     image: postgres:17-alpine
     environment:

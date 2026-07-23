@@ -1,0 +1,170 @@
+:root {
+	font-family: system-ui, sans-serif;
+	color: #1c2430;
+	background: #f6f7f9;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+}
+
+header {
+	padding: 1rem 1.5rem;
+	background: #14432f;
+	color: #fff;
+}
+
+h1 {
+	margin: 0;
+	font-size: 1.15rem;
+}
+
+.layout {
+	display: grid;
+	grid-template-columns: minmax(320px, 1fr) 1.2fr;
+	gap: 1rem;
+	padding: 1rem 1.5rem;
+	max-width: 1100px;
+}
+
+.list,
+.detail {
+	background: #fff;
+	border: 1px solid #e2e6ea;
+	border-radius: 8px;
+	padding: 1rem;
+	align-self: start;
+}
+
+.toolbar {
+	margin-bottom: 0.75rem;
+}
+
+.tickets {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: 0.25rem;
+}
+
+.ticket {
+	width: 100%;
+	display: flex;
+	gap: 0.5rem;
+	align-items: center;
+	text-align: left;
+	padding: 0.5rem;
+	border: 1px solid transparent;
+	background: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font: inherit;
+}
+
+.ticket:hover {
+	background: #eef2f6;
+}
+
+.ticket.selected {
+	border-color: #14432f;
+}
+
+.subject {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.badge {
+	font-size: 0.72rem;
+	padding: 0.1rem 0.45rem;
+	border-radius: 999px;
+	background: #e3e7ec;
+	white-space: nowrap;
+}
+
+.status-open {
+	background: #dbeafe;
+	color: #1d4ed8;
+}
+
+.status-in_progress {
+	background: #fef3c7;
+	color: #b45309;
+}
+
+.status-resolved {
+	background: #d1fae5;
+	color: #047857;
+}
+
+.status-closed {
+	background: #e5e7eb;
+	color: #4b5563;
+}
+
+.prio-high {
+	background: #fee2e2;
+	color: #b91c1c;
+}
+
+.prio-low {
+	color: #6b7280;
+}
+
+.pager {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 0.75rem;
+	font-size: 0.85rem;
+}
+
+.transitions {
+	display: flex;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+	margin-top: 1rem;
+}
+
+.transitions button,
+.pager button {
+	font: inherit;
+	padding: 0.35rem 0.75rem;
+	border: 1px solid #cbd2d9;
+	border-radius: 6px;
+	background: #fff;
+	cursor: pointer;
+}
+
+.transitions button:hover:not(:disabled),
+.pager button:hover:not(:disabled) {
+	background: #eef2f6;
+}
+
+.transitions button:disabled,
+.pager button:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+.body {
+	white-space: pre-wrap;
+}
+
+.error {
+	color: #b91c1c;
+	background: #fee2e2;
+	padding: 0.5rem 0.75rem;
+	border-radius: 6px;
+}
+
+.placeholder {
+	color: #6b7280;
+}

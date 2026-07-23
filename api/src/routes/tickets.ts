@@ -31,6 +31,10 @@ export const ticketRoutes: FastifyPluginAsyncZod = async (app) => {
 		"/tickets",
 		{
 			schema: {
+				// tags+operationId — для потребителя контракта: tags-split-раскладка Orval
+				// и человеческие имена хуков (useCreateTicket и т.д.)
+				tags: ["tickets"],
+				operationId: "createTicket",
 				body: CreateTicketSchema,
 				response: { 201: TicketSchema, ...errorResponses },
 			},
@@ -45,6 +49,8 @@ export const ticketRoutes: FastifyPluginAsyncZod = async (app) => {
 		"/tickets",
 		{
 			schema: {
+				tags: ["tickets"],
+				operationId: "listTickets",
 				querystring: ListTicketsQuerySchema,
 				response: { 200: TicketListSchema, ...errorResponses },
 			},
@@ -70,6 +76,8 @@ export const ticketRoutes: FastifyPluginAsyncZod = async (app) => {
 		"/tickets/:id",
 		{
 			schema: {
+				tags: ["tickets"],
+				operationId: "getTicket",
 				params: IdParamsSchema,
 				response: {
 					200: TicketSchema,
@@ -93,6 +101,8 @@ export const ticketRoutes: FastifyPluginAsyncZod = async (app) => {
 		"/tickets/:id",
 		{
 			schema: {
+				tags: ["tickets"],
+				operationId: "updateTicket",
 				params: IdParamsSchema,
 				body: UpdateTicketSchema,
 				response: {
@@ -121,6 +131,8 @@ export const ticketRoutes: FastifyPluginAsyncZod = async (app) => {
 		"/tickets/:id",
 		{
 			schema: {
+				tags: ["tickets"],
+				operationId: "deleteTicket",
 				params: IdParamsSchema,
 				response: {
 					204: z.null(),
@@ -148,6 +160,8 @@ export const ticketRoutes: FastifyPluginAsyncZod = async (app) => {
 		"/tickets/:id/transition",
 		{
 			schema: {
+				tags: ["tickets"],
+				operationId: "transitionTicket",
 				params: IdParamsSchema,
 				body: TransitionSchema,
 				response: {

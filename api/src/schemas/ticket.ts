@@ -5,20 +5,26 @@ export const TicketStatusSchema = z.enum(TICKET_STATUSES);
 
 export const TicketPrioritySchema = z.enum(["low", "normal", "high"]);
 
-export const TicketSchema = z.object({
-	id: z.uuid(),
-	subject: z.string().min(1),
-	body: z.string().min(1),
-	status: TicketStatusSchema,
-	priority: TicketPrioritySchema,
-});
+// .meta({id}) → components/schemas + $ref в openapi.json → именованные типы
+// у Orval (Ticket, TicketList, …) вместо инлайновых listTickets200ItemsItem
+export const TicketSchema = z
+	.object({
+		id: z.uuid(),
+		subject: z.string().min(1),
+		body: z.string().min(1),
+		status: TicketStatusSchema,
+		priority: TicketPrioritySchema,
+	})
+	.meta({ id: "Ticket" });
 
 export const CreateTicketSchema = TicketSchema.pick({
 	subject: true,
 	body: true,
-}).extend({
-	priority: TicketPrioritySchema.default("normal"),
-});
+})
+	.extend({
+		priority: TicketPrioritySchema.default("normal"),
+	})
+	.meta({ id: "CreateTicket" });
 
 // strictObject: попытка патчить status (или любое лишнее поле) → явный 400,
 // а не тихий стрип — статус меняется только через /transition (контракт №1).
@@ -28,19 +34,24 @@ export const UpdateTicketSchema = z
 		body: TicketSchema.shape.body,
 		priority: TicketPrioritySchema,
 	})
-	.partial();
+	.partial()
+	.meta({ id: "UpdateTicket" });
 
-export const TransitionSchema = z.object({
-	to: TicketStatusSchema,
-});
+export const TransitionSchema = z
+	.object({
+		to: TicketStatusSchema,
+	})
+	.meta({ id: "TransitionRequest" });
 
 // Ответ списка — контракт №5: offset-пагинация {items, total, page, limit}.
-export const TicketListSchema = z.object({
-	items: z.array(TicketSchema),
-	total: z.int().nonnegative(),
-	page: z.int().positive(),
-	limit: z.int().positive(),
-});
+export const TicketListSchema = z
+	.object({
+		items: z.array(TicketSchema),
+		total: z.int().nonnegative(),
+		page: z.int().positive(),
+		limit: z.int().positive(),
+	})
+	.meta({ id: "TicketList" });
 
 export const ListTicketsQuerySchema = z.object({
 	status: TicketStatusSchema.optional(),
